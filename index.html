@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>チケット管理トラッカー</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Hiragino Sans','Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif;font-size:14px;background:#f7f7f5;color:#1a1a1a}
+.tabs{display:flex;border-bottom:1px solid #e0e0e0;background:#fff;position:sticky;top:0;z-index:10;overflow-x:auto}
+.tab{padding:12px 14px;font-size:13px;cursor:pointer;border-bottom:2px solid transparent;color:#888;background:none;border-top:none;border-left:none;border-right:none;flex-shrink:0;font-weight:500;white-space:nowrap}
+.tab.on{color:#1a1a1a;border-bottom-color:#1a1a1a;font-weight:700}
+.pane{display:none;padding:12px}.pane.on{display:block}
+.hint{font-size:11px;color:#bbb;text-align:center;margin-bottom:.6rem}
+.add-btn{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;font-size:13px;cursor:pointer;border:1px solid #ddd;border-radius:8px;background:#fff;color:#1a1a1a;margin-bottom:10px;font-weight:500}
+.add-btn:hover{background:#f5f5f5}
+.empty{text-align:center;color:#ccc;font-size:13px;padding:2.5rem 0}
+.card{background:#fff;border:1px solid #e8e8e8;border-radius:12px;padding:.9rem 1rem;margin-bottom:.85rem;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.card.paired{border-color:#93c5fd}
+.card-dir{font-size:11px;color:#aaa;margin-bottom:3px;font-weight:500;letter-spacing:.02em}
+.card-hd{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:7px}
+.card-title{font-size:14px;font-weight:600;line-height:1.3}
+.card-sub{font-size:11px;color:#aaa;margin-top:2px}
+.actions{display:flex;gap:3px;flex-shrink:0;margin-left:6px;flex-wrap:wrap;justify-content:flex-end}
+.ibtn{font-size:11px;cursor:pointer;background:#f5f5f5;border:1px solid #e0e0e0;border-radius:6px;padding:3px 8px;color:#555;white-space:nowrap;font-weight:500}
+.ibtn:hover{background:#ebebeb}
+.ibtn.done{background:#f0faf0;color:#2a7a2a;border-color:#b8ddb8}
+.ibtn.pair-on{background:#eff6ff;color:#1d4ed8;border-color:#93c5fd}
+.ibtn.del{background:#fff5f5;color:#c00;border-color:#fca5a5}
+.ibtn.del:hover{background:#fee2e2}
+.badges{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:7px}
+.badge{font-size:11px;padding:2px 8px;border-radius:100px;font-weight:600;white-space:nowrap}
+.b-n{background:#f0f0f0;color:#666}
+.b-w{background:#fff7ed;color:#c2410c}
+.b-i{background:#eff6ff;color:#1d4ed8}
+.b-s{background:#f0fdf4;color:#166534}
+.b-p{background:#eff6ff;color:#1d4ed8}
+.fg2{display:grid;grid-template-columns:1fr 1fr;gap:5px 14px;margin-bottom:7px}
+.fl{font-size:10px;color:#aaa;margin-bottom:1px;font-weight:500;letter-spacing:.02em}
+.fv{font-size:12px;color:#1a1a1a;word-break:break-all}
+.divider{border:none;border-top:1px solid #f0f0f0;margin:8px 0}
+.priv{background:#f9f9f7;border-radius:8px;padding:8px 10px;border:1px dashed #e0e0e0}
+.priv-lbl{font-size:10px;color:#aaa;margin-bottom:5px;font-weight:600;letter-spacing:.04em}
+.pair-card{background:#eff6ff;border:1px solid #93c5fd;border-radius:12px;padding:.9rem 1rem;margin-bottom:.85rem}
+.pair-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.pair-title{font-size:13px;font-weight:600;color:#1d4ed8}
+.pair-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}
+.pair-side{background:#fff;border-radius:8px;padding:8px 10px}
+.pair-side-lbl{font-size:10px;color:#aaa;margin-bottom:4px;font-weight:600;letter-spacing:.02em}
+.tstep{border:1px solid #e8e8e8;border-radius:8px;padding:9px 11px;margin-bottom:7px;background:#fff}
+.tstep.mid{border-style:dashed;background:#fafafa}
+.step-hd{font-size:11px;color:#666;margin-bottom:5px;font-weight:600}
+.modal-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:50}
+.modal-backdrop.on{display:block}
+.modal-wrap{display:none;position:fixed;inset:0;z-index:51;overflow-y:auto;padding:12px;-webkit-overflow-scrolling:touch}
+.modal-wrap.on{display:block}
+.modal{background:#fff;border-radius:14px;border:1px solid #e0e0e0;padding:1.2rem;width:100%;max-width:520px;margin:0 auto;box-shadow:0 8px 32px rgba(0,0,0,.12)}
+.modal-title{font-size:15px;font-weight:700;margin-bottom:1rem;color:#1a1a1a}
+.fg{margin-bottom:10px}
+.fg label{font-size:12px;color:#666;display:block;margin-bottom:3px;font-weight:500}
+.fg input,.fg select,.fg textarea{width:100%;font-size:14px;padding:8px 10px;border:1px solid #ddd;border-radius:8px;background:#fff;color:#1a1a1a;-webkit-appearance:none;font-family:inherit}
+.fg input:focus,.fg select:focus,.fg textarea:focus{outline:none;border-color:#93c5fd;box-shadow:0 0 0 3px rgba(147,197,253,.15)}
+.fg textarea{height:56px;resize:vertical}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.sb{border:1px solid #e0e0e0;border-radius:10px;padding:11px;margin-bottom:4px;background:#fff}
+.sb.mid{border-style:dashed;background:#fafafa}
+.sb-hd{font-size:12px;font-weight:600;color:#555;margin-bottom:7px;display:flex;justify-content:space-between;align-items:center;gap:6px}
+.sb-hd select{font-size:12px;padding:4px 6px;border:1px solid #ddd;border-radius:6px;background:#fff;color:#1a1a1a;flex:1;font-family:inherit}
+.sb-btns{display:flex;gap:3px;flex-shrink:0}
+.priv-s{border-top:1px dashed #e0e0e0;padding-top:9px;margin-top:8px}
+.priv-sl{font-size:10px;color:#aaa;margin-bottom:7px;font-weight:600;letter-spacing:.04em}
+.modal-acts{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+.btn-c{padding:8px 16px;font-size:13px;cursor:pointer;border:1px solid #ddd;border-radius:8px;background:#fff;color:#666;font-weight:500;font-family:inherit}
+.btn-s{padding:8px 16px;font-size:13px;cursor:pointer;border:none;border-radius:8px;background:#1a1a1a;color:#fff;font-weight:700;font-family:inherit}
+.btn-s:hover{background:#333}
+.add-step-btn{display:flex;align-items:center;justify-content:center;gap:4px;width:100%;padding:8px;font-size:12px;cursor:pointer;border:1px dashed #ccc;border-radius:8px;background:none;color:#888;margin-bottom:8px;font-family:inherit;font-weight:500}
+.add-step-btn:hover{background:#f5f5f5}
+.pair-item{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border:1px solid #e8e8e8;border-radius:8px;margin-bottom:6px;cursor:pointer;background:#fff}
+.pair-item:hover{background:#f5f5f5}
+.io-bar{display:flex;gap:8px;margin-bottom:10px}
+.io-btn{flex:1;padding:9px;font-size:12px;cursor:pointer;border:1px solid #ddd;border-radius:8px;background:#fff;color:#555;text-align:center;font-weight:500;font-family:inherit}
+.io-btn:hover{background:#f5f5f5}
+.search-row{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;align-items:center}
+.search-row input{flex:1;min-width:120px;font-size:13px;padding:8px 10px;border:1px solid #ddd;border-radius:8px;background:#fff;color:#1a1a1a;font-family:inherit}
+.search-row input:focus{outline:none;border-color:#93c5fd}
+.search-row select{font-size:12px;padding:7px 8px;border:1px solid #ddd;border-radius:8px;background:#fff;color:#1a1a1a;font-family:inherit;-webkit-appearance:none}
+.sbtn{padding:7px 11px;font-size:12px;cursor:pointer;border:1px solid #ddd;border-radius:8px;background:#fff;color:#555;white-space:nowrap;font-weight:500;font-family:inherit}
+.sbtn:hover{background:#f5f5f5}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="tabs" id="tabs"></div>
+  <div id="give" class="pane on"></div>
+  <div id="receive" class="pane"></div>
+  <div id="exchange" class="pane"></div>
+  <div id="triangle" class="pane"></div>
+  <div id="done" class="pane"></div>
+</div>
+
+<div class="modal-backdrop" id="backdrop"></div>
+<div class="modal-wrap" id="modal-wrap">
+  <div class="modal" id="modal-inner">
+    <div class="modal-title" id="modal-title"></div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<script>
+const TABS=['give','receive','exchange','triangle','done'];
+const TLBL={give:'渡す',receive:'受け取る',exchange:'交換',triangle:'三角交換',done:'取引完了'};
+const KUMI=['花組','月組','雪組','星組','宙組','その他'];
+const REL=['X','おけぴ','その他'];
+const SEATS=['SS席','S+席','S席','A席','B席','立ち見'];
+const TYPE_LBL={give:'当方→相手様',receive:'相手様→当方',mid:'中間'};
+const LS_KEY='ticket_tracker_v10';
+
+let db={give:[],receive:[],triangle:[],done:[]};
+let pairs=[];
+let curModalTab=null,curIdx=null,triSteps=[];
+let searchQ={give:'',receive:'',exchange:'',triangle:'',done:''};
+let sortKey={give:'',receive:'',exchange:'',triangle:'',done:''};
+
+// ローカルストレージ保存・読込
+function save(){try{localStorage.setItem(LS_KEY,JSON.stringify({db,pairs}));}catch(e){}}
+function load(){try{const d=JSON.parse(localStorage.getItem(LS_KEY)||'{}');if(d.db)db=d.db;if(d.pairs)pairs=d.pairs;}catch(e){}}
+
+(function(){
+  load();
+  const el=document.getElementById('tabs');
+  TABS.forEach(t=>{
+    const b=document.createElement('button');
+    b.className='tab'+(t==='give'?' on':'');
+    b.textContent=TLBL[t];
+    b.onclick=()=>switchTab(t);
+    el.appendChild(b);
+  });
+  renderAll();
+})();
+
+let curTab='give';
+function switchTab(t){
+  curTab=t;
+  document.querySelectorAll('.tab').forEach((b,i)=>b.classList.toggle('on',TABS[i]===t));
+  document.querySelectorAll('.pane').forEach(p=>p.classList.remove('on'));
+  document.getElementById(t).classList.add('on');
+}
+
+function doSearch(tab){
+  const el=document.getElementById('sq-'+tab);
+  if(el) searchQ[tab]=el.value;
+  renderAll();
+}
+function clearSearch(tab){
+  searchQ[tab]='';
+  const el=document.getElementById('sq-'+tab);
+  if(el) el.value='';
+  renderAll();
+}
+function delCard(tab,i){
+  if(!confirm('このカードを削除しますか？')) return;
+  db[tab].splice(i,1);
+  pairs=pairs.filter(p=>!((p.giveTab===tab&&p.giveIdx===i)||(p.receiveTab===tab&&p.receiveIdx===i)));
+  save();renderAll();
+}
+
+function fmtDate(v){
+  if(!v) return '—';
+  try{const d=new Date(v);return d.getFullYear()+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+String(d.getDate()).padStart(2,'0')+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')}catch{return v}
+}
+function dealLbl(v){return v==='exchange'?'交換':'譲渡'}
+function payBadge(v,stype){
+  if(stype==='give'||stype==='mid') return v==='received'?'<span class="badge b-i">受取済</span>':'<span class="badge b-w">未払</span>';
+  return v==='paid'?'<span class="badge b-s">支払済</span>':'<span class="badge b-w">未払</span>';
+}
+function txBadge(v,stype){
+  if(stype==='receive') return v==='delivered'?'<span class="badge b-i">受取済み</span>':'<span class="badge b-w">未受取</span>';
+  return v==='delivered'?'<span class="badge b-i">受渡済み</span>':'<span class="badge b-w">未受渡</span>';
+}
+function F(label,value){return `<div><div class="fl">${label}</div><div class="fv">${value||'—'}</div></div>`}
+function seatDisplay(it){
+  const parts=[it.seatType,it.seatRow,it.seatCount?it.seatCount+'枚':null].filter(Boolean);
+  return parts.join(' / ')||'—';
+}
+function getLinked(tab,i){
+  const p=pairs.find(p=>(p.giveTab===tab&&p.giveIdx===i)||(p.receiveTab===tab&&p.receiveIdx===i));
+  if(!p) return null;
+  return p.giveTab===tab&&p.giveIdx===i?{tab:p.receiveTab,i:p.receiveIdx}:{tab:p.giveTab,i:p.giveIdx};
+}
+function matchSearch(it,q){
+  if(!q) return true;
+  const ql=q.toLowerCase();
+  return [it.performance,it.kumi,it.partner,it.email,it.place,it.owner,it.memo,it.rel,it.seatType,it.seatRow,dealLbl(it.deal)].some(f=>f&&String(f).toLowerCase().includes(ql));
+}
+function sortItems(items,key){
+  if(!key) return items;
+  return [...items].sort((a,b)=>{
+    if(key==='date'){const da=a.date||'',db2=b.date||'';return da<db2?-1:da>db2?1:0}
+    if(key==='deal') return dealLbl(a.deal).localeCompare(dealLbl(b.deal));
+    if(key==='pay') return (a.pay||'').localeCompare(b.pay||'');
+    if(key==='tx') return (a.tx||'').localeCompare(b.tx||'');
+    if(key==='perf') return (a.performance||'').localeCompare(b.performance||'');
+    return 0;
+  });
+}
+
+function searchBar(tab){
+  const sortOpts=tab==='triangle'||tab==='exchange'?'':
+    ['date:公演日','perf:公演名','deal:取引内容','pay:支払状況','tx:取引状況'].map(o=>{
+      const[v,l]=o.split(':');return `<option value="${v}"${sortKey[tab]===v?' selected':''}>${l}</option>`;
+    }).join('');
+  const sortSel=sortOpts?`<select onchange="sortKey['${tab}']=this.value;renderAll()"><option value="">並べ替え</option>${sortOpts}</select>`:'';
+  const q=searchQ[tab]||'';
+  return `<div class="search-row">
+    <input id="sq-${tab}" placeholder="検索… (Enterで実行)" value="${q}"
+      onkeydown="if(event.key==='Enter'){event.preventDefault();doSearch('${tab}')}">
+    <button class="sbtn" onclick="doSearch('${tab}')">検索</button>
+    ${q?`<button class="sbtn" onclick="clearSearch('${tab}')">✕クリア</button>`:''}
+    ${sortSel}
+  </div>`;
+}
+
+function renderAll(){
+  renderNormalTab('give');
+  renderNormalTab('receive');
+  renderExchangeTab();
+  renderTriTab();
+  renderDoneTab();
+}
+
+function paneTop(tab){
+  const hint={give:'メモ・持ち主・関係はスクショ除外エリアです',receive:'メモ・持ち主・関係はスクショ除外エリアです',exchange:'紐付けされた渡す⇔受け取るのペア一覧です',triangle:'メモ・持ち主・取引内容・関係はスクショ除外エリアです',done:'完了済みの取引一覧です'}[tab];
+  const addBtn=(tab!=='exchange'&&tab!=='done')?`<button class="add-btn" onclick="openModal('${tab}',null)">＋ 新規追加</button>`:'';
+  const ioBar=tab==='give'?`<div class="io-bar"><button class="io-btn" onclick="exportData()">⬇ バックアップ</button><button class="io-btn" onclick="triggerImport()">⬆ 復元</button><input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(event)"></div>`:'';
+  return `${ioBar}<p class="hint">${hint}</p>${addBtn}${searchBar(tab)}`;
+}
+
+function renderNormalTab(tab){
+  const el=document.getElementById(tab);
+  el.innerHTML=paneTop(tab)+'<div id="'+tab+'-list"></div>';
+  const list=document.getElementById(tab+'-list');
+  let items=db[tab].map((it,i)=>({it,i})).filter(({it})=>matchSearch(it,searchQ[tab]));
+  if(sortKey[tab]) items=sortItems(items.map(x=>({...x.it,_i:x.i})),sortKey[tab]).map(it=>({it,i:it._i}));
+  if(!items.length){list.innerHTML='<p class="empty">登録がありません</p>';return;}
+  list.innerHTML=items.map(({it,i})=>renderCard(it,i,tab)).join('');
+}
+
+function renderExchangeTab(){
+  const el=document.getElementById('exchange');
+  el.innerHTML=paneTop('exchange')+'<div id="exchange-list"></div>';
+  const list=document.getElementById('exchange-list');
+  const q=searchQ['exchange']||'';
+  const filtered=pairs.filter(p=>{
+    const gi=db.give[p.giveIdx]||{},ri=db.receive[p.receiveIdx]||{};
+    return matchSearch(gi,q)||matchSearch(ri,q);
+  });
+  if(!filtered.length){list.innerHTML='<p class="empty">紐付けされた交換はありません</p>';return;}
+  list.innerHTML=filtered.map((p,pi)=>{
+    const gi=db.give[p.giveIdx]||{},ri=db.receive[p.receiveIdx]||{};
+    return `<div class="pair-card">
+      <div class="pair-hd">
+        <span class="pair-title">⇄ 交換 ${pi+1}${gi.performance?' ／ '+gi.performance:''}</span>
+        <button class="ibtn" onclick="unpair(${pairs.indexOf(p)})">解除</button>
+      </div>
+      <div class="pair-row">
+        <div class="pair-side"><div class="pair-side-lbl">当方→相手様（渡す）</div>
+          <div style="font-size:13px;font-weight:600;margin-bottom:4px">${gi.performance||'—'}</div>
+          <div class="fg2">${F('相手',gi.partner)}${F('日時',fmtDate(gi.date))}${F('席',seatDisplay(gi))}${F('金額',gi.amount?'¥'+Number(gi.amount).toLocaleString():'')}</div>
+          <div class="badges">${payBadge(gi.pay,'give')}${txBadge(gi.tx,'give')}</div>
+        </div>
+        <div class="pair-side"><div class="pair-side-lbl">相手様→当方（受け取る）</div>
+          <div style="font-size:13px;font-weight:600;margin-bottom:4px">${ri.performance||'—'}</div>
+          <div class="fg2">${F('相手',ri.partner)}${F('日時',fmtDate(ri.date))}${F('席',seatDisplay(ri))}${F('金額',ri.amount?'¥'+Number(ri.amount).toLocaleString():'')}</div>
+          <div class="badges">${payBadge(ri.pay,'receive')}${txBadge(ri.tx,'receive')}</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderTriTab(){
+  const el=document.getElementById('triangle');
+  el.innerHTML=paneTop('triangle')+'<div id="triangle-list"></div>';
+  const list=document.getElementById('triangle-list');
+  const q=searchQ['triangle']||'';
+  const visible=db.triangle.filter(it=>matchSearch(it,q)||(it.steps||[]).some(s=>matchSearch(s,q)));
+  if(!visible.length){list.innerHTML='<p class="empty">登録がありません</p>';return;}
+  list.innerHTML=db.triangle.map((it,i)=>{
+    if(!(matchSearch(it,q)||(it.steps||[]).some(s=>matchSearch(s,q)))) return '';
+    return renderTri(it,i);
+  }).join('');
+}
+
+function renderDoneTab(){
+  const el=document.getElementById('done');
+  el.innerHTML=paneTop('done')+'<div id="done-list"></div>';
+  const list=document.getElementById('done-list');
+  let items=db.done.map((it,i)=>({it,i})).filter(({it})=>matchSearch(it,searchQ['done']));
+  if(sortKey['done']) items=sortItems(items.map(x=>({...x.it,_i:x.i})),sortKey['done']).map(it=>({it,i:it._i}));
+  if(!items.length){list.innerHTML='<p class="empty">登録がありません</p>';return;}
+  list.innerHTML=items.map(({it,i})=>renderDone(it,i)).join('');
+}
+
+function renderCard(it,i,tab){
+  const dir=tab==='give'?'当方→相手様':'相手様→当方';
+  const pl=tab==='give'?'渡す相手':'渡してくれる人';
+  const stype=tab==='give'?'give':'receive';
+  const linked=getLinked(tab,i);
+  return `<div class="card${linked?' paired':''}">
+    <div class="card-dir">${dir}</div>
+    <div class="card-hd">
+      <div><div class="card-title">${it.performance||'（公演名未設定）'}</div>${it.kumi?`<div class="card-sub">${it.kumi}</div>`:''}</div>
+      <div class="actions">
+        <button class="ibtn${linked?' pair-on':''}" onclick="openPairSelect('${tab}',${i})">${linked?'紐付け済':'紐付け'}</button>
+        <button class="ibtn" onclick="toTriangle('${tab}',${i})">⇄3</button>
+        <button class="ibtn" onclick="openModal('${tab}',${i})">編集</button>
+        <button class="ibtn done" onclick="toDone('${tab}',${i})">完了</button>
+        <button class="ibtn del" onclick="delCard('${tab}',${i})">🗑</button>
+      </div>
+    </div>
+    <div class="badges"><span class="badge b-n">${dealLbl(it.deal)}</span>${payBadge(it.pay,stype)}${txBadge(it.tx,stype)}${linked?'<span class="badge b-p">⇄ 交換</span>':''}</div>
+    <div class="fg2">${F(pl,it.partner)}${F('メール',it.email)}${F('日時',fmtDate(it.date))}${F('席',seatDisplay(it))}${F('金額',it.amount?'¥'+Number(it.amount).toLocaleString():'')}${F('受け渡し場所',it.place)}</div>
+    <div class="divider"></div>
+    <div class="priv"><div class="priv-lbl">🔒 スクショ除外エリア</div>
+      <div class="fg2">${F('チケット持ち主',it.owner)}${F('関係',it.rel)}</div>
+      <div style="margin-top:4px"><div class="fl">メモ</div><div class="fv" style="color:#666">${it.memo||'なし'}</div></div>
+    </div>
+  </div>`;
+}
+
+function renderTri(it,i){
+  const steps=it.steps||[];
+  const stHtml=steps.map(s=>`<div class="tstep${s.stype==='mid'?' mid':''}">
+    <div class="step-hd">${TYPE_LBL[s.stype]||'中間'}${s.performance?' ／ '+s.performance:''}</div>
+    <div class="badges">${s.kumi?`<span class="badge b-n">${s.kumi}</span>`:''}${payBadge(s.pay,s.stype)}${txBadge(s.tx,s.stype)}</div>
+    <div class="fg2">${F('相手',s.partner)}${F('メール',s.email)}${F('日時',fmtDate(s.date))}${F('席',seatDisplay(s))}${F('金額',s.amount?'¥'+Number(s.amount).toLocaleString():'')}${F('受け渡し場所',s.place)}</div>
+  </div>`).join('');
+  const privHtml=steps.map(s=>`<div style="margin-bottom:6px"><div class="fl">${TYPE_LBL[s.stype]||'中間'}${s.performance?' ('+s.performance+')':''} 持ち主</div><div class="fv">${s.owner||'—'}</div><div class="fl" style="margin-top:2px">取引内容</div><div class="fv">${dealLbl(s.deal)}</div><div class="fl" style="margin-top:2px">関係</div><div class="fv">${s.rel||'—'}</div></div>`).join('');
+  return `<div class="card">
+    <div class="card-hd"><div class="card-title">${it.name||'三角交換'}</div>
+      <div class="actions">
+        <button class="ibtn" onclick="openModal('triangle',${i})">編集</button>
+        <button class="ibtn done" onclick="toDone('triangle',${i})">完了</button>
+        <button class="ibtn del" onclick="delCard('triangle',${i})">🗑</button>
+      </div>
+    </div>
+    ${stHtml}
+    <div class="divider"></div>
+    <div class="priv"><div class="priv-lbl">🔒 スクショ除外エリア</div>${privHtml}<div style="margin-top:4px"><div class="fl">メモ</div><div class="fv" style="color:#666">${it.memo||'なし'}</div></div></div>
+  </div>`;
+}
+
+function renderDone(it,i){
+  const srcLbl=it._src==='give'?'渡す':it._src==='receive'?'受け取る':'三角交換';
+  return `<div class="card" style="opacity:.75">
+    <div class="card-dir">完了済み（元：${srcLbl}タブ）</div>
+    <div class="card-hd"><div class="card-title">${it.performance||it.name||'—'}</div>
+      <div class="actions">
+        <button class="ibtn" onclick="fromDone(${i},'give')">渡</button>
+        <button class="ibtn" onclick="fromDone(${i},'receive')">受</button>
+        <button class="ibtn del" onclick="delCard('done',${i})">🗑</button>
+      </div>
+    </div>
+    <div class="fg2">${F('相手',it.partner)}${F('メール',it.email)}${F('日時',fmtDate(it.date))}${F('公演名',it.performance||it.name)}${F('席',seatDisplay(it))}${F('金額',it.amount?'¥'+Number(it.amount).toLocaleString():'')}</div>
+  </div>`;
+}
+
+function openPairSelect(tab,i){
+  const linked=getLinked(tab,i);
+  if(linked){if(confirm('紐付けを解除しますか？')){pairs=pairs.filter(p=>!((p.giveTab===tab&&p.giveIdx===i)||(p.receiveTab===tab&&p.receiveIdx===i)));save();renderAll();}return;}
+  const oppTab=tab==='give'?'receive':'give';
+  document.getElementById('modal-title').textContent=tab==='give'?'受け取るカードと紐付ける':'渡すカードと紐付ける';
+  document.getElementById('modal-inner').className='modal';
+  const body=document.getElementById('modal-body');
+  if(!db[oppTab].length){
+    body.innerHTML=`<p style="font-size:13px;color:#aaa;padding:12px 0">${oppTab==='give'?'渡す':'受け取る'}タブにカードがありません</p><div class="modal-acts"><button class="btn-c" onclick="closeModal()">閉じる</button></div>`;
+  } else {
+    body.innerHTML=db[oppTab].map((it,oi)=>`
+      <div class="pair-item" onclick="doPair('${tab}',${i},'${oppTab}',${oi})">
+        <div><div style="font-size:13px;font-weight:600">${it.performance||'（公演名未設定）'}</div><div style="font-size:11px;color:#aaa;margin-top:2px">${it.partner||'—'} / ${fmtDate(it.date)}</div></div>
+        <span style="font-size:18px;color:#aaa">›</span>
+      </div>`).join('')+`<div class="modal-acts"><button class="btn-c" onclick="closeModal()">キャンセル</button></div>`;
+  }
+  document.getElementById('backdrop').classList.add('on');
+  document.getElementById('modal-wrap').classList.add('on');
+  document.getElementById('modal-wrap').scrollTop=0;
+}
+
+function doPair(tab,i,oppTab,oi){
+  pairs=pairs.filter(p=>!((p.giveTab===tab&&p.giveIdx===i)||(p.receiveTab===tab&&p.receiveIdx===i)||(p.giveTab===oppTab&&p.giveIdx===oi)||(p.receiveTab===oppTab&&p.receiveIdx===oi)));
+  const giveTab=tab==='give'?tab:oppTab,giveIdx=tab==='give'?i:oi;
+  const receiveTab=tab==='receive'?tab:oppTab,receiveIdx=tab==='receive'?i:oi;
+  pairs.push({giveTab,giveIdx,receiveTab,receiveIdx});
+  save();closeModal();renderAll();switchTab('exchange');
+}
+function unpair(pi){pairs.splice(pi,1);save();renderAll();}
+function toDone(tab,i){const it=JSON.parse(JSON.stringify(db[tab][i]));it._src=tab;db.done.push(it);db[tab].splice(i,1);pairs=pairs.filter(p=>!((p.giveTab===tab&&p.giveIdx===i)||(p.receiveTab===tab&&p.receiveIdx===i)));save();renderAll();}
+function fromDone(i,t){const it=JSON.parse(JSON.stringify(db.done[i]));delete it._src;db[t].push(it);db.done.splice(i,1);save();renderAll();switchTab(t);}
+function toTriangle(srcTab,i){
+  const it=db[srcTab][i];const stype=srcTab==='give'?'give':'receive';
+  const s0={stype,performance:it.performance||'',kumi:it.kumi||'',partner:'',email:'',date:it.date||'',seatType:it.seatType||'',seatRow:it.seatRow||'',seatCount:it.seatCount||1,amount:it.amount||'',place:'',tx:it.tx||'pending',pay:it.pay||'unpaid',owner:it.owner||'',deal:it.deal||'transfer',rel:it.rel||''};
+  db.triangle.push({name:it.performance?it.performance+'の三角交換':'三角交換',memo:it.memo||'',steps:[s0,emptyS('mid'),emptyS('receive')]});
+  db[srcTab].splice(i,1);pairs=pairs.filter(p=>!((p.giveTab===srcTab&&p.giveIdx===i)||(p.receiveTab===srcTab&&p.receiveIdx===i)));save();renderAll();switchTab('triangle');
+}
+function emptyS(stype){return {stype,performance:'',kumi:'',partner:'',email:'',date:'',seatType:'',seatRow:'',seatCount:1,amount:'',place:'',tx:'pending',pay:'unpaid',owner:'',deal:'transfer',rel:''}}
+
+function kumiOpts(v){return '<option value="">—</option>'+KUMI.map(k=>`<option value="${k}"${v===k?' selected':''}>${k}</option>`).join('')}
+function relOpts(v){return '<option value="">—</option>'+REL.map(r=>`<option value="${r}"${v===r?' selected':''}>${r}</option>`).join('')}
+function dealOpts(v){return `<option value="transfer"${(!v||v==='transfer')?' selected':''}>譲渡</option><option value="exchange"${v==='exchange'?' selected':''}>交換</option>`}
+function seatTypeOpts(v){return '<option value="">—</option>'+SEATS.map(s=>`<option value="${s}"${v===s?' selected':''}>${s}</option>`).join('')}
+function seatCountOpts(v){return [1,2,3,4,5].map(n=>`<option value="${n}"${String(v||1)===String(n)?' selected':''}>${n}枚</option>`).join('')}
+function payOpts(stype,v){
+  if(stype==='give'||stype==='mid') return `<option value="unpaid"${(!v||v==='unpaid')?' selected':''}>未払</option><option value="received"${v==='received'?' selected':''}>受取済</option>`;
+  return `<option value="unpaid"${(!v||v==='unpaid')?' selected':''}>未払</option><option value="paid"${v==='paid'?' selected':''}>支払済</option>`;
+}
+function txOpts(stype,v){
+  if(stype==='receive') return `<option value="pending"${(!v||v==='pending')?' selected':''}>未受取</option><option value="delivered"${v==='delivered'?' selected':''}>受取済み</option>`;
+  return `<option value="pending"${(!v||v==='pending')?' selected':''}>未受渡</option><option value="delivered"${v==='delivered'?' selected':''}>受渡済み</option>`;
+}
+function dtInput(id,val){return `<input type="datetime-local" id="${id}" value="${val||''}">`}
+function seatFields(prefix,it){
+  return `<div class="fg"><label>席種 / 列 / 枚数</label><div style="display:grid;grid-template-columns:1fr 1fr 72px;gap:6px">
+    <select id="${prefix}-seatType">${seatTypeOpts(it.seatType)}</select>
+    <input id="${prefix}-seatRow" placeholder="例: 3列目" value="${it.seatRow||''}">
+    <select id="${prefix}-seatCount">${seatCountOpts(it.seatCount)}</select>
+  </div></div>`;
+}
+function normalForm(tab,it){
+  const pl=tab==='give'?'渡す相手':'渡してくれる人';
+  const stype=tab==='give'?'give':'receive';
+  return `
+  <div class="frow"><div class="fg"><label>公演名</label><input id="f-perf" value="${it.performance||''}"></div><div class="fg"><label>組名</label><select id="f-kumi">${kumiOpts(it.kumi)}</select></div></div>
+  <div class="frow"><div class="fg"><label>${pl}</label><input id="f-partner" value="${it.partner||''}"></div><div class="fg"><label>メールアドレス</label><input type="email" id="f-email" value="${it.email||''}"></div></div>
+  <div class="fg"><label>日時</label>${dtInput('f-date',it.date)}</div>
+  ${seatFields('f',it)}
+  <div class="frow"><div class="fg"><label>金額</label><input type="number" id="f-amount" value="${it.amount||''}"></div><div class="fg"><label>受け渡し場所</label><input id="f-place" value="${it.place||''}"></div></div>
+  <div class="frow"><div class="fg"><label>取引内容</label><select id="f-deal">${dealOpts(it.deal)}</select></div><div class="fg"><label>支払状況</label><select id="f-pay">${payOpts(stype,it.pay)}</select></div></div>
+  <div class="fg"><label>取引状況</label><select id="f-tx">${txOpts(stype,it.tx)}</select></div>
+  <div class="priv-s"><div class="priv-sl">🔒 スクショ除外</div>
+    <div class="frow"><div class="fg"><label>チケット持ち主</label><input id="f-owner" value="${it.owner||''}"></div><div class="fg"><label>関係</label><select id="f-rel">${relOpts(it.rel)}</select></div></div>
+    <div class="fg"><label>メモ（非共有）</label><textarea id="f-memo">${it.memo||''}</textarea></div>
+  </div>`;
+}
+function stepBlock(s,si){
+  const isMid=s.stype==='mid';
+  const typeOpts=['give','receive','mid'].map(t=>`<option value="${t}"${s.stype===t?' selected':''}>${TYPE_LBL[t]}</option>`).join('');
+  return `<div class="sb${isMid?' mid':''}" id="sb-${si}">
+    <div class="sb-hd">
+      <select onchange="changeStepType(${si},this.value)">${typeOpts}</select>
+      <div class="sb-btns">
+        <button class="ibtn" onclick="moveStep(${si},-1)">↑</button>
+        <button class="ibtn" onclick="moveStep(${si},1)">↓</button>
+        <button class="ibtn del" onclick="removeStep(${si})">🗑</button>
+      </div>
+    </div>
+    <div class="frow"><div class="fg"><label>公演名</label><input id="s${si}-p" value="${s.performance||''}"></div><div class="fg"><label>組名</label><select id="s${si}-k">${kumiOpts(s.kumi)}</select></div></div>
+    <div class="frow"><div class="fg"><label>相手</label><input id="s${si}-partner" value="${s.partner||''}"></div><div class="fg"><label>メール</label><input type="email" id="s${si}-email" value="${s.email||''}"></div></div>
+    <div class="fg"><label>日時</label>${dtInput(`s${si}-d`,s.date)}</div>
+    ${seatFields('s'+si,s)}
+    <div class="frow"><div class="fg"><label>金額</label><input type="number" id="s${si}-amt" value="${s.amount||''}"></div><div class="fg"><label>受け渡し場所</label><input id="s${si}-place" value="${s.place||''}"></div></div>
+    <div class="frow"><div class="fg"><label>支払状況</label><select id="s${si}-pay">${payOpts(s.stype,s.pay)}</select></div><div class="fg"><label>取引状況</label><select id="s${si}-tx">${txOpts(s.stype,s.tx)}</select></div></div>
+    <div class="priv-s"><div class="priv-sl">🔒 スクショ除外</div>
+      <div class="fg"><label>チケット持ち主</label><input id="s${si}-owner" value="${s.owner||''}"></div>
+      <div class="frow"><div class="fg"><label>取引内容</label><select id="s${si}-deal">${dealOpts(s.deal)}</select></div><div class="fg"><label>関係</label><select id="s${si}-rel">${relOpts(s.rel)}</select></div></div>
+    </div>
+  </div>
+  <button class="add-step-btn" onclick="addStep(${si+1})">＋ 取引を追加</button>`;
+}
+function renderTriForm(){
+  let html='';
+  if(!triSteps.length) html='<p style="font-size:13px;color:#aaa;text-align:center;padding:12px">取引がありません</p><button class="add-step-btn" onclick="addStep(0)">＋ 取引を追加</button>';
+  else triSteps.forEach((s,si)=>{html+=stepBlock(s,si);});
+  document.getElementById('tri-steps').innerHTML=html;
+}
+function collectTri(){
+  triSteps=triSteps.map((_,si)=>({
+    stype:triSteps[si].stype,
+    performance:document.getElementById(`s${si}-p`)?.value||'',
+    kumi:document.getElementById(`s${si}-k`)?.value||'',
+    partner:document.getElementById(`s${si}-partner`)?.value||'',
+    email:document.getElementById(`s${si}-email`)?.value||'',
+    date:document.getElementById(`s${si}-d`)?.value||'',
+    seatType:document.getElementById(`s${si}-seatType`)?.value||'',
+    seatRow:document.getElementById(`s${si}-seatRow`)?.value||'',
+    seatCount:document.getElementById(`s${si}-seatCount`)?.value||1,
+    amount:document.getElementById(`s${si}-amt`)?.value||'',
+    place:document.getElementById(`s${si}-place`)?.value||'',
+    pay:document.getElementById(`s${si}-pay`)?.value||'unpaid',
+    tx:document.getElementById(`s${si}-tx`)?.value||'pending',
+    owner:document.getElementById(`s${si}-owner`)?.value||'',
+    deal:document.getElementById(`s${si}-deal`)?.value||'transfer',
+    rel:document.getElementById(`s${si}-rel`)?.value||'',
+  }));
+}
+function addStep(pos){collectTri();triSteps.splice(pos,0,emptyS('give'));renderTriForm();}
+function removeStep(si){if(triSteps.length<=1){alert('最後の取引は削除できません');return;}collectTri();triSteps.splice(si,1);renderTriForm();}
+function moveStep(si,dir){collectTri();const ni=si+dir;if(ni<0||ni>=triSteps.length)return;[triSteps[si],triSteps[ni]]=[triSteps[ni],triSteps[si]];renderTriForm();}
+function changeStepType(si,val){collectTri();triSteps[si].stype=val;renderTriForm();}
+
+function openModal(tab,idx){
+  curModalTab=tab;curIdx=idx;
+  const it=idx!==null?db[tab][idx]:{};
+  document.getElementById('modal-title').textContent=idx!==null?'編集':(tab==='give'?'渡すチケットを追加':tab==='receive'?'受け取るチケットを追加':'三角交換を追加');
+  document.getElementById('modal-inner').className='modal';
+  const body=document.getElementById('modal-body');
+  if(tab==='triangle'){
+    triSteps=it.steps&&it.steps.length?JSON.parse(JSON.stringify(it.steps)):[emptyS('give'),emptyS('mid'),emptyS('receive')];
+    body.innerHTML=`<div class="fg"><label>取引グループ名</label><input id="f-name" value="${it.name||''}"></div><div id="tri-steps"></div>
+    <div class="priv-s"><div class="priv-sl">🔒 スクショ除外</div><div class="fg"><label>メモ（非共有）</label><textarea id="f-memo">${it.memo||''}</textarea></div></div>
+    <div class="modal-acts"><button class="btn-c" onclick="closeModal()">キャンセル</button><button class="btn-s" onclick="saveTri()">保存</button></div>`;
+    renderTriForm();
+  } else {
+    body.innerHTML=normalForm(tab,it)+`<div class="modal-acts"><button class="btn-c" onclick="closeModal()">キャンセル</button><button class="btn-s" onclick="saveNormal()">保存</button></div>`;
+  }
+  document.getElementById('backdrop').classList.add('on');
+  document.getElementById('modal-wrap').classList.add('on');
+  document.getElementById('modal-wrap').scrollTop=0;
+}
+function closeModal(){
+  document.getElementById('backdrop').classList.remove('on');
+  document.getElementById('modal-wrap').classList.remove('on');
+  triSteps=[];
+}
+function saveNormal(){
+  const it={performance:document.getElementById('f-perf').value,kumi:document.getElementById('f-kumi').value,partner:document.getElementById('f-partner').value,email:document.getElementById('f-email').value,date:document.getElementById('f-date').value,seatType:document.getElementById('f-seatType').value,seatRow:document.getElementById('f-seatRow').value,seatCount:document.getElementById('f-seatCount').value,amount:document.getElementById('f-amount').value,place:document.getElementById('f-place').value,deal:document.getElementById('f-deal').value,pay:document.getElementById('f-pay').value,tx:document.getElementById('f-tx').value,owner:document.getElementById('f-owner').value,rel:document.getElementById('f-rel').value,memo:document.getElementById('f-memo').value};
+  if(curIdx!==null) db[curModalTab][curIdx]=it; else db[curModalTab].push(it);
+  save();closeModal();renderAll();
+}
+function saveTri(){
+  collectTri();
+  const it={name:document.getElementById('f-name').value,steps:JSON.parse(JSON.stringify(triSteps)),memo:document.getElementById('f-memo').value};
+  if(curIdx!==null) db.triangle[curIdx]=it; else db.triangle.push(it);
+  save();closeModal();renderAll();
+}
+function exportData(){
+  const payload=JSON.stringify({db,pairs},null,2);
+  const a=document.createElement('a');
+  a.href='data:application/json;charset=utf-8,'+encodeURIComponent(payload);
+  a.download='ticket_backup_'+new Date().toISOString().slice(0,10)+'.json';
+  a.click();
+}
+function triggerImport(){document.getElementById('import-file').click();}
+function importData(e){
+  const file=e.target.files[0];if(!file)return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    try{const d=JSON.parse(ev.target.result);if(d.db)db=d.db;if(d.pairs)pairs=d.pairs;save();renderAll();alert('復元しました！');}
+    catch{alert('ファイルが読み込めませんでした');}
+  };
+  r.readAsText(file);
+}
+document.getElementById('backdrop').addEventListener('click',closeModal);
+</script>
+</body>
+</html>
